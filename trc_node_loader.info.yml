@@ -1,0 +1,8 @@
+name: 'TRC Node Loader'
+type: module
+description: 'Helps content_sync load the nodes'
+core: 8.x
+core_version_requirement: ^8 || ^9
+package: 'Custom'
+dependencies:
+  - content_sync

@@ -1,0 +1,5 @@
+services:
+  trc_node_loader.commands:
+    class: \Drupal\trc_node_loader\Commands\TrcNodeLoaderCommands
+    tags:
+      - { name: drush.command }

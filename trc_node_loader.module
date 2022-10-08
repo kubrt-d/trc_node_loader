@@ -1,0 +1,24 @@
+<?php
+
+/**
+ * @file
+ * Contains trc_node_loader.module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function trc_node_loader_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the trc_node_loader module.
+    case 'help.page.trc_node_loader':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Helps content_sync load the nodes') . '</p>';
+      return $output;
+
+    default:
+  }
+}

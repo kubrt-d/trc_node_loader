@@ -1,0 +1,11 @@
+{
+    "name": "org/trc_node_loader",
+    "type": "drupal-drush",
+    "extra": {
+        "drush": {
+            "services": {
+                "drush.services.yml": "^10"
+            }
+        }
+    }
+}

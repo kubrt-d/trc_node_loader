@@ -1,0 +1,8 @@
+
+trc_node_loader.inspect_controller_inspect:
+  path: '/tnl/inspect'
+  defaults:
+    _controller: '\Drupal\trc_node_loader\Controller\InspectController::inspect'
+    _title: 'InspectController'
+  requirements:
+    _permission: 'access content'
