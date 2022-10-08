@@ -1,6 +1,8 @@
 {
     "name": "org/trc_node_loader",
     "type": "drupal-drush",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "extra": {
         "drush": {
             "services": {
