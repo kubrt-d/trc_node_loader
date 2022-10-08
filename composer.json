@@ -1,6 +1,6 @@
 {
     "name": "kubrt-d/trc_node_loader",
-    "type": "drupal-drush",
+    "type": "drupal-module",
     "minimum-stability": "dev",
     "license": "GPL-2.0+",
     "prefer-stable": true,
