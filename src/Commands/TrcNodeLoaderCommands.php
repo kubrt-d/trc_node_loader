@@ -63,6 +63,11 @@ class TrcNodeLoaderCommands extends DrushCommands {
         $new_node->addTranslation($lang, $node_translation_data);
       }
     }
+    try {
+      $new_node->save();
+    } catch (Exception $e) {
+      return false;
+    }
     return $new_node->save();
   }
 
