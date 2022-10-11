@@ -112,10 +112,15 @@ class TrcNodeLoaderCommands extends DrushCommands {
     return $out;
   } 
 
-  // Returns the entity ID or 0
+  // Returns the entity ID or NULL
   private function uuidToID(string $target_type, string $target_uuid) {
-    $entity_loaded_by_uuid = $entity = \Drupal::service('entity.repository')->loadEntityByUuid($target_type, $target_uuid);
-    return $entity->id();
+    $entity = \Drupal::service('entity.repository')->loadEntityByUuid($target_type, $target_uuid);
+    if ($entity) {
+      return $entity->id();
+    } else {
+      $this->logger()->warning(dt("Can't derefrence uuid $target_uuid, type $target_type"));  
+      return null;
+    }
   }
 
   /* Try to guess what kind of field this is in order to reformat it correctly for node::create */
