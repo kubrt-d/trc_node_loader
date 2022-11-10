@@ -21,6 +21,91 @@ use Symfony\Component\Yaml\Yaml;
  */
 class TrcNodeLoaderCommands extends DrushCommands
 {
+  /**
+   * Exports nodes including special fields (like layout builder) 
+   *
+   * @param string $uuid
+   *   An associative array of options whose values come from cli, aliases, config, etc.
+   * @option option-name
+   *   Description
+   * @usage trc_node_loader-specialexport tgse 
+   *   Usage description
+   *
+   * @command trc_node_loader:specialexport
+   * @aliases tgse
+   */
+  public function specialexport($uuid='',$options = ['option-name' => 'default'])
+  {
+    $logger = $this->logger();
+    /** @var Drush\Log\Logger $logger*/
+    global $content_directories;
+    if (!$uuid) {
+      $logger->warning(dt('UUID must be provided '));
+      return;
+    }
+    $node = reset(\Drupal::entityTypeManager()->getStorage('node')->loadByProperties(['uuid' => $uuid]));
+    /** @var \Drupal\group\Entity\Node $node */
+    if (!$bundle = @$node->bundle()) {
+      $logger->warning(dt('Can\'t find node with UUID ' . $uuid));
+      return;
+    } 
+    
+    $serialized = serialize($node);
+    
+    if (!file_exists($content_directories['sync'] . '/special')) {
+      mkdir($content_directories['sync'] . '/special');
+    }
+    file_put_contents($content_directories['sync'] . '/special/node.' . $bundle . '.' . $uuid . '.serialized', $serialized);
+    $logger->success(dt('Exported node with UUID ' . $uuid));
+  }
+
+  /**
+   * Exports nodes from the special directory
+   *
+   * @param array $options
+   *   An associative array of options whose values come from cli, aliases, config, etc.
+   * @option option-name
+   *   Description
+   * @usage trc_node_loader-specialexport tgsi 
+   *   Usage description
+   *
+   * @command trc_node_loader:specialexport
+   * @aliases tgsi
+   */
+  public function specialimport($options = ['option-name' => 'default'])
+  {
+    $logger = $this->logger();
+    /** @var Drush\Log\Logger $logger*/
+    global $content_directories;
+
+    if (!file_exists($content_directories['sync'] . '/special')) {
+      $logger->warning(dt('Directory ' . $content_directories['sync'] . '/special does not exist ! Exiting.'));
+      return;
+    }
+    $files = $this->getDirContents(($content_directories['sync'] . '/special'));
+    foreach ($files as $file) {
+      if (!strstr($file,'.serialized')) continue;
+      $node=unserialize(file_get_contents($file));
+      $node->save();
+      $logger->success(dt('Saved node UUID ' . $node->uuid()));
+    }
+    
+    return;
+    $node = reset(\Drupal::entityTypeManager()->getStorage('node')->loadByProperties(['uuid' => $uuid]));
+    /** @var \Drupal\group\Entity\Node $node */
+    if (!$bundle = @$node->bundle()) {
+      $logger->warning(dt('Can\'t find node with UUID ' . $uuid));
+      return;
+    } 
+    
+    $serialized = serialize($file_get_contents($yaml_file));
+    
+    if (!file_exists($content_directories['sync'] . '/special')) {
+      mkdir($content_directories['sync'] . '/special');
+    }
+    file_put_contents($content_directories['sync'] . '/special/node.' . $bundle . '.' . $uuid . '.serialized', $serialized);
+    $logger->success(dt('Exported node with UUID ' . $uuid));
+  }
 
   /**
    * Exports node-group associations 
@@ -114,7 +199,7 @@ class TrcNodeLoaderCommands extends DrushCommands
     /* Collate them together by group */
     foreach ($associations as $association) {
       $groups_content[$association['group_uuid']][] = $association['node_uuid'];
-      $logger->success(dt('Captured group ' . $association['group_uuid'] . ' associations for node ' . $association['node_uuid']));
+      $logger->success(dt('Importing group ' . $association['group_uuid'] . ' associations for node ' . $association['node_uuid']));
     }
     foreach ($groups_content as $group_uuid => $node_uuids) {
       /** @var \Drupal\group\Entity\Group $group */
@@ -126,32 +211,7 @@ class TrcNodeLoaderCommands extends DrushCommands
         $group->addContent($node, 'group_node:' . $node_type);
       }
     }
-
     return;
-    $out = [];
-    $groups = \Drupal::entityTypeManager()->getStorage('group')->loadByProperties(['status' => 1]);
-
-    /** @var \Drupal\group\Entity\GroupInterface $group */
-    foreach ($groups as $group_id => $group) {
-      /** @var \Drupal\group\Entity\Storage\GroupContentStorage $storage */
-      $group_contents = $group->getContent();
-      $group_uuid = $group->get('uuid')->getString();
-      foreach ($group_contents as $c) {
-        $type = $c->getGroupContentType()->getContentPlugin()->getBaseId();
-        if ($type != 'group_node') continue;
-        $node = $c->getEntity();
-        /** @var \Drupal\group\Entity\Storage\Node $node */
-        $node_uuid = $node->get('uuid')->getString();
-        if (in_array($node_uuid, $uuids)) {
-          $out[] = ['node_uuid' => $node_uuid, 'group_uuid' => $group_uuid];
-        }
-      }
-    }
-    $yaml = Yaml::dump($out);
-    if (!file_exists($content_directories['sync'] . '/group')) {
-      mkdir($content_directories['sync'] . '/group');
-    }
-    file_put_contents($content_directories['sync'] . '/group/node_group.yaml', $yaml);
   }
 
   /**
