@@ -86,25 +86,13 @@ class TrcNodeLoaderCommands extends DrushCommands
     foreach ($files as $file) {
       if (!strstr($file,'.serialized')) continue;
       $node=unserialize(file_get_contents($file));
+      $node->set('nid', NULL);
+      $node->set('vid', NULL);
       $node->save();
       $logger->success(dt('Saved node UUID ' . $node->uuid()));
     }
     
     return;
-    $node = reset(\Drupal::entityTypeManager()->getStorage('node')->loadByProperties(['uuid' => $uuid]));
-    /** @var \Drupal\group\Entity\Node $node */
-    if (!$bundle = @$node->bundle()) {
-      $logger->warning(dt('Can\'t find node with UUID ' . $uuid));
-      return;
-    } 
-    
-    $serialized = serialize($file_get_contents($yaml_file));
-    
-    if (!file_exists($content_directories['sync'] . '/special')) {
-      mkdir($content_directories['sync'] . '/special');
-    }
-    file_put_contents($content_directories['sync'] . '/special/node.' . $bundle . '.' . $uuid . '.serialized', $serialized);
-    $logger->success(dt('Exported node with UUID ' . $uuid));
   }
 
   /**
