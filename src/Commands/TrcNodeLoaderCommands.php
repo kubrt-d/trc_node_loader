@@ -28,11 +28,11 @@ class TrcNodeLoaderCommands extends DrushCommands
    *   An associative array of options whose values come from cli, aliases, config, etc.
    * @option option-name
    *   Description
-   * @usage trc_node_loader-specialexport tgse 
+   * @usage trc_node_loader-specialexport tnse 
    *   Usage description
    *
    * @command trc_node_loader:specialexport
-   * @aliases tgse
+   * @aliases tnse
    */
   public function specialexport($uuid='',$options = ['option-name' => 'default'])
   {
@@ -66,11 +66,11 @@ class TrcNodeLoaderCommands extends DrushCommands
    *   An associative array of options whose values come from cli, aliases, config, etc.
    * @option option-name
    *   Description
-   * @usage trc_node_loader-specialexport tgsi 
+   * @usage trc_node_loader-specialexport tnsi 
    *   Usage description
    *
    * @command trc_node_loader:specialexport
-   * @aliases tgsi
+   * @aliases tnsi
    */
   public function specialimport($options = ['option-name' => 'default'])
   {
