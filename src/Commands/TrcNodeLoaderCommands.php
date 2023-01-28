@@ -5,6 +5,7 @@ namespace Drupal\trc_node_loader\Commands;
 use Consolidation\OutputFormatters\StructuredData\RowsOfFields;
 use Drush\Commands\DrushCommands;
 use Symfony\Component\Yaml\Yaml;
+use Drupal\path_alias\Entity\PathAlias;
 
 
 
@@ -34,7 +35,7 @@ class TrcNodeLoaderCommands extends DrushCommands
    * @command trc_node_loader:specialexport
    * @aliases tnse
    */
-  public function specialexport($uuid='',$options = ['option-name' => 'default'])
+  public function specialexport($uuid = '', $options = ['option-name' => 'default'])
   {
     $logger = $this->logger();
     /** @var Drush\Log\Logger $logger*/
@@ -48,10 +49,10 @@ class TrcNodeLoaderCommands extends DrushCommands
     if (!$bundle = @$node->bundle()) {
       $logger->warning(dt('Can\'t find node with UUID ' . $uuid));
       return;
-    } 
-    
+    }
+
     $serialized = serialize($node);
-    
+
     if (!file_exists($content_directories['sync'] . '/special')) {
       mkdir($content_directories['sync'] . '/special');
     }
@@ -84,14 +85,14 @@ class TrcNodeLoaderCommands extends DrushCommands
     }
     $files = $this->getDirContents(($content_directories['sync'] . '/special'));
     foreach ($files as $file) {
-      if (!strstr($file,'.serialized')) continue;
-      $node=unserialize(file_get_contents($file));
+      if (!strstr($file, '.serialized')) continue;
+      $node = unserialize(file_get_contents($file));
       $node->set('nid', NULL);
       $node->set('vid', NULL);
       $node->save();
       $logger->success(dt('Saved node UUID ' . $node->uuid()));
     }
-    
+
     return;
   }
 
@@ -253,13 +254,13 @@ class TrcNodeLoaderCommands extends DrushCommands
     $uuid = $node_data['uuid'][0]['value'];
     /** @var Drush\Log\Logger $logger*/
     $logger->success(dt("Got data for $uuid"));
-    $uuid_already_exists = $this->uuidToID('node',$uuid);
-    
+    $uuid_already_exists = $this->uuidToID('node', $uuid, false);
+
     if ($uuid_already_exists) {
-        $logger->warning(dt("Node with uuid $uuid already exists with id $uuid_already_exists, skipping"));
-        return false;
+      $logger->warning(dt("Node with uuid $uuid already exists with id $uuid_already_exists, skipping"));
+      return false;
     }
-    
+
 
     $new_node = \Drupal::entityTypeManager()->getStorage('node')->create($node_data);
     /** @var \Drupal\Core\Entity\ContentEntityBase $new_node  */
@@ -270,11 +271,32 @@ class TrcNodeLoaderCommands extends DrushCommands
       }
     }
     try {
-      $new_node->save();
+      $result = $new_node->save();
     } catch (Exception $e) {
       return false;
     }
-    return $new_node->save();
+    
+    // Couldn't figure out how to disbale automatic alias for a particular content type.
+    // So we deletes them all creates new ones ex-post with what is in the yaml 
+    if ($result == SAVED_NEW && $new_node->bundle() == 'trc_page') {
+      //$bad_alias = \Drupal::service('path_alias.manager')->getAliasByPath('/node/' . $new_node->id());
+      $path_alias_manager = \Drupal::entityTypeManager()->getStorage('path_alias');
+      // Load all path alias for this node for es language.
+        $alias_objects = $path_alias_manager->loadByProperties([
+          'path'     => '/node/' . $new_node->id(),
+      ]);
+      foreach ($alias_objects as $alias_object) {
+          $alias_object->delete();
+      }
+
+      $alias = $node_data['path'][0]['alias'] ?? null;
+      $path_alias = PathAlias::create([
+        'path' => '/node/' . $new_node->id(),
+        'alias' => $alias,
+      ]);
+      $path_alias->save();
+    }
+    return $result;
   }
 
   private function yamlToNodeData($yaml): array
@@ -300,16 +322,16 @@ class TrcNodeLoaderCommands extends DrushCommands
             $node_data[$yaml_key] = strtotime($yaml_value[0]['value']);
             break;
           }
-        case 'datetimezone': { 
-             if (!empty($yaml_value)) {
-                list($yaml_value[0]['value']) = explode('+',$yaml_value[0]['value']);
-                list($yaml_value[0]['end_value']) = explode('+',$yaml_value[0]['end_value']);
-                $node_data[$yaml_key] = $yaml_value;
-             }
-             break;
+        case 'datetimezone': {
+            if (!empty($yaml_value)) {
+              list($yaml_value[0]['value']) = explode('+', $yaml_value[0]['value']);
+              list($yaml_value[0]['end_value']) = explode('+', $yaml_value[0]['end_value']);
+              $node_data[$yaml_key] = $yaml_value;
+            }
+            break;
           }
         case 'other': {
-            
+
             $node_data[$yaml_key] = $yaml_value;
           }
       }
@@ -333,13 +355,13 @@ class TrcNodeLoaderCommands extends DrushCommands
   }
 
   // Returns the entity ID or NULL
-  private function uuidToID(string $target_type, string $target_uuid)
+  private function uuidToID(string $target_type, string $target_uuid, $verbose = true)
   {
     $entity = \Drupal::service('entity.repository')->loadEntityByUuid($target_type, $target_uuid);
     if ($entity) {
       return $entity->id();
     } else {
-      $this->logger()->warning(dt("Can't derefrence uuid $target_uuid, type $target_type"));
+      if ($verbose) $this->logger()->warning(dt("Can't derefrence uuid $target_uuid, type $target_type"));
       return null;
     }
   }
@@ -350,7 +372,7 @@ class TrcNodeLoaderCommands extends DrushCommands
     if (substr($yaml_key, 0, 1) === "_") return 'special';
     if (array_key_exists(0, $yaml_value) && array_key_exists('target_uuid', $yaml_value[0])) return 'entity_reference';
     if ($yaml_key == 'created' || $yaml_key == 'changed') return 'timestamp';
-    if ($yaml_key == 'field_event_date' ) return 'datetimezone';
+    if ($yaml_key == 'field_event_date') return 'datetimezone';
     return 'other';
   }
 
