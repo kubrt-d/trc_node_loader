@@ -238,6 +238,55 @@ class TrcNodeLoaderCommands extends DrushCommands
     }
   }
 
+  /**
+   * Command description here.
+   *
+   * @param array $options
+   *   An associative array of options whose values come from cli, aliases, config, etc.
+   * @option option-name
+   *   Description
+   * @usage trc_node_loader-menuadditem mai
+   *   Usage description
+   *
+   * @command trc_node_loader:menuadditem
+   * @aliases mai
+   */
+  public function menuadditem($options = ['option-name' => 'default'])
+  { 
+    /** @var Drush\Log\Logger $logger*/
+    $logger = $this->logger();
+    $menus = ['topnavigation', 'top-navigation---logged-in'];
+    foreach ($menus as $menu_name) {
+      $menu_link_storage = \Drupal::entityTypeManager()->getStorage('menu_link_content');
+
+      $my_menu = $menu_link_storage->loadByProperties(['menu_name' => $menu_name]);
+
+      $top_level = null;
+      foreach ($my_menu as $menu_item) {
+        /**  @var Drupal\menu_link_content\Entity\MenuLinkContent $menu_item */
+        $parent_id = $menu_item->getParentId();
+        if (!empty($parent_id)) {
+          $top_level = $parent_id;
+          break;
+        }
+      }
+
+      $result = $menu_link_storage->create([
+        'title' => 'Resource Centre',
+        'link' => ['uri' => 'internal:/trc'],
+        'menu_name' => $menu_name,
+        'parent' => $top_level,
+        'expanded' => TRUE,
+        'weight' => -10,
+      ])->save();
+      if ($result == SAVED_NEW) {
+        $logger->success(dt('Created menu link in  ' . $menu_name));
+      } else {
+        $logger->warning(dt('Could not create menu link in  ' . $menu_name));
+      }
+    }
+  }
+
   private function getNodeFromYAML(string $yaml_file)
   {
     if (is_file($yaml_file)) {
@@ -275,18 +324,18 @@ class TrcNodeLoaderCommands extends DrushCommands
     } catch (Exception $e) {
       return false;
     }
-    
+
     // Couldn't figure out how to disbale automatic alias for a particular content type.
     // So we deletes them all creates new ones ex-post with what is in the yaml 
     if ($result == SAVED_NEW && $new_node->bundle() == 'trc_page') {
       //$bad_alias = \Drupal::service('path_alias.manager')->getAliasByPath('/node/' . $new_node->id());
       $path_alias_manager = \Drupal::entityTypeManager()->getStorage('path_alias');
       // Load all path alias for this node for es language.
-        $alias_objects = $path_alias_manager->loadByProperties([
-          'path'     => '/node/' . $new_node->id(),
+      $alias_objects = $path_alias_manager->loadByProperties([
+        'path'     => '/node/' . $new_node->id(),
       ]);
       foreach ($alias_objects as $alias_object) {
-          $alias_object->delete();
+        $alias_object->delete();
       }
 
       $alias = $node_data['path'][0]['alias'] ?? null;
