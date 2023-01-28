@@ -231,7 +231,7 @@ class TrcNodeLoaderCommands extends DrushCommands
         } elseif ($result == 2) {
           $logger->success(dt('Imported as an update ' . basename($yaml_file)));
         } else {
-          $logger->failure(dt('Failed to import ' . basename($yaml_file)));
+          $logger->warning(dt('Failed to import ' . basename($yaml_file)));
         }
       }
     }
@@ -247,8 +247,20 @@ class TrcNodeLoaderCommands extends DrushCommands
 
   private function importNodeFromYAML(string $yaml_file): bool
   {
+    $logger = $this->logger();
     $yaml = $this->getNodeFromYAML($yaml_file);
     $node_data = $this->yamlToNodeData($yaml);
+    $uuid = $node_data['uuid'][0]['value'];
+    /** @var Drush\Log\Logger $logger*/
+    $logger->success(dt("Got data for $uuid"));
+    $uuid_already_exists = $this->uuidToID('node',$uuid);
+    
+    if ($uuid_already_exists) {
+        $logger->warning(dt("Node with uuid $uuid already exists with id $uuid_already_exists, skipping"));
+        return false;
+    }
+    
+
     $new_node = \Drupal::entityTypeManager()->getStorage('node')->create($node_data);
     /** @var \Drupal\Core\Entity\ContentEntityBase $new_node  */
     if (array_key_exists('_translations', $yaml)) {
@@ -288,9 +300,16 @@ class TrcNodeLoaderCommands extends DrushCommands
             $node_data[$yaml_key] = strtotime($yaml_value[0]['value']);
             break;
           }
-
+        case 'datetimezone': { 
+             if (!empty($yaml_value)) {
+                list($yaml_value[0]['value']) = explode('+',$yaml_value[0]['value']);
+                list($yaml_value[0]['end_value']) = explode('+',$yaml_value[0]['end_value']);
+                $node_data[$yaml_key] = $yaml_value;
+             }
+             break;
+          }
         case 'other': {
-            // Do nothing 
+            
             $node_data[$yaml_key] = $yaml_value;
           }
       }
@@ -331,6 +350,7 @@ class TrcNodeLoaderCommands extends DrushCommands
     if (substr($yaml_key, 0, 1) === "_") return 'special';
     if (array_key_exists(0, $yaml_value) && array_key_exists('target_uuid', $yaml_value[0])) return 'entity_reference';
     if ($yaml_key == 'created' || $yaml_key == 'changed') return 'timestamp';
+    if ($yaml_key == 'field_event_date' ) return 'datetimezone';
     return 'other';
   }
 
