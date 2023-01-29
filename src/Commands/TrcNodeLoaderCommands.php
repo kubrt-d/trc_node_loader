@@ -196,7 +196,11 @@ class TrcNodeLoaderCommands extends DrushCommands
       foreach ($node_uuids as $node_uuid) {
         $node = reset(\Drupal::entityTypeManager()->getStorage('node')->loadByProperties(['uuid' => $node_uuid]));
         /** @var \Drupal\Core\Entity\ContentEntityInterface $node */
-        $node_type = $node?->get('type')->getString();
+        if (is_object($node)) {
+          $node_type = $node->get('type')->getString();
+        } else {
+          $node_type = false;
+        }
         if ($node_type) {
           $group->addContent($node, 'group_node:' . $node_type);
         } else {
