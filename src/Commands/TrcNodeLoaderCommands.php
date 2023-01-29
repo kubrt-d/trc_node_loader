@@ -196,13 +196,16 @@ class TrcNodeLoaderCommands extends DrushCommands
       foreach ($node_uuids as $node_uuid) {
         $node = reset(\Drupal::entityTypeManager()->getStorage('node')->loadByProperties(['uuid' => $node_uuid]));
         /** @var \Drupal\Core\Entity\ContentEntityInterface $node */
-        $node_type = $node->get('type')->getString();
-        $group->addContent($node, 'group_node:' . $node_type);
+        $node_type = $node?->get('type')->getString();
+        if ($node_type) {
+          $group->addContent($node, 'group_node:' . $node_type);
+        } else {
+          $logger->warning(dt('Got lost trying load node uuid ' . $node_uuid . ' to associate with group ' . $group_uuid));
+        }
       }
+      return;
     }
-    return;
   }
-
   /**
    * Command description here.
    *
@@ -252,7 +255,7 @@ class TrcNodeLoaderCommands extends DrushCommands
    * @aliases mai
    */
   public function menuadditem($options = ['option-name' => 'default'])
-  { 
+  {
     /** @var Drush\Log\Logger $logger*/
     $logger = $this->logger();
     $menus = ['topnavigation', 'top-navigation---logged-in'];
